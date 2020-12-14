@@ -10,6 +10,7 @@
 # Many things were ripped from this very good guide:
 # https://web.archive.org/web/20190819054107if_/http://www.netlabsug.org:80/documentum/Openstack-Laboratory-Guide_v5.0.1-Pike-Release.pdf
 
+MY_INSTANCE=cirros-1
 
 # NOTE: This image must already exist
 MY_IMAGE=cirros
@@ -174,11 +175,9 @@ echo $sf
 # create volume
 sf=$sd/created-volume-$MY_PROJECT-$MY_VOLUME
 echo $sf
-[ -f "$sf" ] || {
-	openstack volume show $MY_VOLUME || {
-		openstack volume create --size $MY_VOLUME_SIZE_GB  $MY_VOLUME
-	}
-	touch $sf
+# volume could be deleted by terminated instance, so always query for it...
+openstack volume show -f value -c size $MY_VOLUME || {
+	openstack volume create --size $MY_VOLUME_SIZE_GB  $MY_VOLUME
 }
 
 # create keypair if not exist
@@ -193,6 +192,7 @@ echo "$sf"
 	mv ${MY_KEYPAIR_FILE}.tmp $MY_KEYPAIR_FILE
 }
 
+echo "Getting network ID for $MY_NET"
 MY_NET_ID=$(openstack network show -f value -c id $MY_NET)
 [ -n "$MY_NET_ID" ] || {
 	echo "Error getting ID of network $MY_NET in project $MY_PROJECT" >&2
@@ -200,6 +200,53 @@ MY_NET_ID=$(openstack network show -f value -c id $MY_NET)
 }
 echo "Network '$MY_NET' has ID='$MY_NET_ID'"
 
-#penstack server create --flavor m1.nano \
-#--image cirros --nic net-id=$NIC --security-group default \
-#--key-name mykey cirrOS-test
+
+sf=$sd/created-instance-$MY_PROJECT-$MY_INSTANCE
+echo $sf
+# Instances are dynamic by nature - so we don't use status file
+if openstack server show -f value -c addresses $MY_INSTANCE;then
+	echo "Instance $MY_INSTANCE already exists"
+else
+  openstack server create --flavor $MY_FLAVOR \
+     --image $MY_IMAGE --nic net-id=$MY_NET_ID --security-group $MY_SECGROUP \
+      --key-name $MY_KEYPAIR $MY_INSTANCE
+fi
+
+state=''
+# TODO: Wait for a while
+echo "Waiting for instance $MY_INSTANCE to be ACTIVE: "
+for i in `seq 1 180`
+do
+  state=$(openstack server show -f value -c status $MY_INSTANCE)
+  [ -n "$state" ] || {
+	echo "Unable to get state for instance $MY_INSTANCE" >&2
+	exit 1
+  }
+  [ "$state" != "ACTIVE" ] || break
+  [ "$state" = "BUILDING" ] || {
+	echo "Unexpected state='$state' of instance $MY_INSTANCE">&2
+	exit 1
+  }
+  echo -n "."
+  sleep 5
+done
+[ "x$state" = "xACTIVE" ] || {
+	echo "Unexpected state='$state' of instance $MY_INSTANCE">&2
+	exit 1
+}
+
+# attach volume
+volumes=$(openstack server show -f value -c volumes_attached $MY_INSTANCE)
+# TODO: Detect that right volume was attached
+if [[ $volumes =~ ^id= ]]; then
+	echo "Instance $MY_INSTANCE has already attached volume"
+else
+	echo "Attaching volume $MY_VOLUME to instance $MY_INSTANCE"
+	openstack server add volume $MY_INSTANCE $MY_VOLUME
+fi
+
+echo "Instance $MY_INSTANCE has IP addresses: $(openstack server show -f value -c addresses $MY_INSTANCE )"
+echo "To get web console copy and paste URL below:"
+openstack console url show $MY_INSTANCE
+
+
