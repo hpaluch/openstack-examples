@@ -11,6 +11,13 @@
 # https://web.archive.org/web/20190819054107if_/http://www.netlabsug.org:80/documentum/Openstack-Laboratory-Guide_v5.0.1-Pike-Release.pdf
 
 
+# NOTE: This image must already exist
+MY_IMAGE=cirros
+# NOTE: Flavor must exist (it will not be created)
+MY_FLAVOR=m1.tiny
+
+MY_KEYPAIR=demo_kp
+MY_KEYPAIR_FILE=~/${MY_KEYPAIR}.pem
 
 MY_VOLUME=1GB-Vol
 MY_VOLUME_SIZE_GB=1
@@ -174,4 +181,25 @@ echo $sf
 	touch $sf
 }
 
+# create keypair if not exist
+sf=$MY_KEYPAIR_FILE
+echo "$sf"
+[ -f "$sf" ] || {
+	openstack keypair create --private-key ${MY_KEYPAIR_FILE}.tmp $MY_KEYPAIR
+	file ${MY_KEYPAIR_FILE}.tmp | fgrep 'PEM RSA private key' || {
+		echo "Generated private key file ${MY_KEYPAIR_FILE}.tmp has invalid data" >&2
+		exit 1
+	}
+	mv ${MY_KEYPAIR_FILE}.tmp $MY_KEYPAIR_FILE
+}
 
+MY_NET_ID=$(openstack network show -f value -c id $MY_NET)
+[ -n "$MY_NET_ID" ] || {
+	echo "Error getting ID of network $MY_NET in project $MY_PROJECT" >&2
+	exit 1
+}
+echo "Network '$MY_NET' has ID='$MY_NET_ID'"
+
+#penstack server create --flavor m1.nano \
+#--image cirros --nic net-id=$NIC --security-group default \
+#--key-name mykey cirrOS-test
