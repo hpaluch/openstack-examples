@@ -6,7 +6,14 @@
 #
 # WARNING! I intentionally use unique (different) names from above guide
 # to catch parameter name errors.
+#
+# Many things were ripped from this very good guide:
+# https://web.archive.org/web/20190819054107if_/http://www.netlabsug.org:80/documentum/Openstack-Laboratory-Guide_v5.0.1-Pike-Release.pdf
 
+
+
+MY_VOLUME=1GB-Vol
+MY_VOLUME_SIZE_GB=1
 
 MY_SECGROUP=demosg
 
@@ -156,4 +163,15 @@ echo $sf
 	openstack security group rule create --ethertype IPv4 --proto tcp --dst-port 22  $MY_SECGROUP
 	touch $sf
 }
+
+# create volume
+sf=$sd/created-volume-$MY_PROJECT-$MY_VOLUME
+echo $sf
+[ -f "$sf" ] || {
+	openstack volume show $MY_VOLUME || {
+		openstack volume create --size $MY_VOLUME_SIZE_GB  $MY_VOLUME
+	}
+	touch $sf
+}
+
 
