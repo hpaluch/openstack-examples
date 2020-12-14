@@ -7,7 +7,10 @@ set -xe
 out_file=$HOME/answer_$(date '+%Y%m%d_%H%M%S').txt
 #dr="--dry-run"
 # NOTE: --all-in-one refuses --answer-file, however it generates one in /root on exit
+#
 # Replace enp0s8 with your physical NIC
+# Replace stack-vg with your EMPTY volume group LVM
+#
 # Be sure that your /etc/sysconfig/network-scripts/ifcfg-NIC has assigned STATIC IP Address
 # - it will be swapped by packstack with new bridge br-ex, therefore killing DHCP assigned address from NIC...
 sudo packstack $dr \
