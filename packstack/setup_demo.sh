@@ -85,7 +85,7 @@ echo $sf
 	touch $sf
 }
 
-echo "Setting openstack credentials to tenanat=$MY_PROJECT user=$MY_USER"
+echo "Setting openstack credentials to tenant=$MY_PROJECT user=$MY_USER"
 export OS_USERNAME=$MY_USER
 export OS_PROJECT_NAME=$MY_PROJECT
 export OS_PASSWORD=$MY_PW
