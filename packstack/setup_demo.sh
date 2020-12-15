@@ -223,7 +223,7 @@ do
 	exit 1
   }
   [ "$state" != "ACTIVE" ] || break
-  [ "$state" = "BUILDING" ] || {
+  [ "$state" = "BUILD" ] || {
 	echo "Unexpected state='$state' of instance $MY_INSTANCE">&2
 	exit 1
   }
